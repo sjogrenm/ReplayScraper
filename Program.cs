@@ -59,8 +59,13 @@ namespace ReplayScraper
             }
 
             var fname = Path.Combine(ReplayFolder, replayUrl.Substring(replayUrl.LastIndexOf('/') + 1));
-            if (!File.Exists(fname))
+            if (File.Exists(fname))
             {
+                Console.WriteLine($"{fname} already exists, skipping.");
+            }
+            else
+            {
+                Console.WriteLine($"Downloading {replayUrl} to {fname}");
                 var request = WebRequest.Create(replayUrl);
                 using var response = request.GetResponse();
                 using var stream = response.GetResponseStream();
