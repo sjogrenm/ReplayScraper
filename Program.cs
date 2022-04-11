@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -10,7 +11,7 @@ namespace ReplayScraper
 {
     class Program
     {
-        private static readonly string ReplayFolder = @"D:\Downloads\Replays";
+        private static readonly string ReplayFolder = @"C:\Users\msjog\Downloads\Replays";
 
         static void Main(string[] args)
         {
@@ -28,9 +29,17 @@ namespace ReplayScraper
         private static void ProcessComp(string comp)
         {
             var compResults = DownloadResults(comp);
-            var matchIdCol = (int)(long) ((JValue) compResults["cols"]["idmatch"]).Value;
+            var matchIdCol = compResults["cols"]["idmatch"].Value<int>();
+            var startedCol = compResults["cols"]["started"].Value<int>();
+            var finishedCol = compResults["cols"]["finished"].Value<int>();
+
+            bool IsNotAdminMatch(JToken r)
+            {
+                return r[startedCol].Value<string>() != r[finishedCol].Value<string>();
+            }
+
             var rows = (JArray) compResults["rows"];
-            foreach (var matchId in rows.Select(r => (string)((JValue)r[matchIdCol]).Value))
+            foreach (var matchId in rows.Where(IsNotAdminMatch).Select(r => r[matchIdCol].Value<string>()))
             {
                 DownloadReplay(matchId);
             }
@@ -45,9 +54,8 @@ namespace ReplayScraper
             var request = WebRequest.Create($"https://www.mordrek.com:666/api/v1/queries?req={JsonConvert.SerializeObject(req)}");
             using var response = request.GetResponse();
             using var stream = response.GetResponseStream();
-            var foo = Deserialize<Dictionary<string, object>>(stream);
-            var compResponse = (JObject)foo["response"];
-            return compResponse["compResults"]["result"];
+            var foo = Deserialize<JObject>(stream);
+            return foo["response"]["compResults"]["result"];
         }
 
         private static string DownloadReplay(string matchId)
